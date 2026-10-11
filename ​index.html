@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>マルチ水平器</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 12px;
+            overflow-y: auto;
+        }
+
+        /* 起動スプラッシュ画面 */
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #121212;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        #splash.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .splash-logo {
+            width: 80px;
+            height: 80px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1e1e1e, #111);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 25px rgba(0, 122, 255, 0.2);
+            animation: pulse 2s infinite ease-in-out;
+            margin-bottom: 20px;
+        }
+        .splash-bubble {
+            width: 28px;
+            height: 28px;
+            background: radial-gradient(circle at 30% 30%, #4cd964, #28a745);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(76, 217, 100, 0.5);
+        }
+        .splash-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        .splash-subtitle {
+            font-size: 0.8rem;
+            color: #777;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 122, 255, 0.2); }
+            50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 122, 255, 0.4); }
+            100% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 122, 255, 0.2); }
+        }
+
+        header {
+            text-align: center;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        h1 {
+            font-size: 1rem;
+            color: #888;
+            letter-spacing: 1px;
+        }
+        .main-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            gap: 10px;
+            flex-grow: 1;
+            opacity: 0;
+            transition: opacity 0.8s ease 0.2s;
+        }
+        .main-display.loaded {
+            opacity: 1;
+        }
+
+        .levels-wrapper {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid #333;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .level-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .level-label {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .level-deg {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #4cd964;
+        }
+
+        /* 横方向チューブ */
+        .tube-h {
+            position: relative;
+            width: 120px;
+            height: 28px;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
+        }
+        .tube-h .center-mark {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-50%);
+        }
+
+        /* 縦方向チューブ */
+        .tube-v {
+            position: relative;
+            width: 28px;
+            height: 120px;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            box-shadow: inset 2px 0 5px rgba(0,0,0,0.6);
+        }
+        .tube-v .center-mark {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%);
+        }
+
+        /* 気泡共通 */
+        .bubble {
+            position: absolute;
+            background: radial-gradient(circle at 30% 30%, #4cd964, #28a745);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            transition: transform 0.05s linear;
+        }
+        .bubble.level {
+            background: radial-gradient(circle at 30% 30%, #ffcc00, #ff9500);
+        }
+        .bubble-h {
+            left: 50%; top: 50%; width: 24px; height: 20px; border-radius: 10px; transform: translate(-50%, -50%);
+        }
+        .bubble-v {
+            left: 50%; top: 50%; width: 20px; height: 24px; border-radius: 10px; transform: translate(-50%, -50%);
+        }
+
+        /* アナログコンパスパネル */
+        .compass-panel {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 14px;
+            padding: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .compassDial {
+            position: relative;
+            width: 95px;
+            height: 95px;
+            background: #222;
+            border: 3px solid #444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        .dial-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .dial-mark {
+            position: absolute;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #888;
+        }
+        .mark-n { top: 4px; left: 50%; transform: translateX(-50%); color: #ff3b30; }
+        .mark-e { right: 6px; top: 50%; transform: translateY(-50%); }
+        .mark-s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .mark-w { left: 6px; top: 50%; transform: translateY(-50%); }
+
+        .needle {
+            position: absolute;
+            width: 6px;
+            height: 60px;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            z-index: 2;
+        }
+        .needle-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+        }
+        .needle-n {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 50%;
+            background: #ff3b30;
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+        }
+        .needle-s {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 50%;
+            background: #ccc;
+            clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+        }
+
+        .compass-text {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            text-align: left;
+        }
+        .compass-text .label {
+            font-size: 0.7rem;
+            color: #888;
+        }
+        .compass-text .value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #007aff;
+        }
+
+        /* GPS・位置情報パネル */
+        .gps-panel {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 14px;
+            padding: 12px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .gps-item {
+            background: #222;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .gps-item .label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 2px;
+        }
+        .gps-item .value {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #34c759;
+        }
+
+        .permission-btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 起動時のおしゃれなスプラッシュスクリーン -->
+    <div id="splash">
+        <div class="splash-logo">
+            <div class="splash-bubble"></div>
+        </div>
+        <div class="splash-title">マルチ水平器</div>
+        <div class="splash-subtitle">LEVEL & COMPASS</div>
+        <button id="permissionBtn" class="permission-btn" style="display: none;">センサーを有効化する</button>
+    </div>
+
+    <header>
+        <h1>マルチ水平器</h1>
+    </header>
+
+    <div class="main-display" id="mainDisplay">
+        <!-- 縦横別レベル表示 -->
+        <div class="levels-wrapper">
+            <div class="level-box">
+                <span class="level-label">横 (X)</span>
+                <div class="tube-h" id="tubeX">
+                    <div class="center-mark"></div>
+                    <div class="bubble bubble-h" id="bubbleX"></div>
+                </div>
+                <span class="level-deg" id="degX">0.0°</span>
+            </div>
+
+            <div class="level-box">
+                <span class="level-label">縦 (Y)</span>
+                <div class="tube-v" id="tubeY">
+                    <div class="center-mark"></div>
+                    <div class="bubble bubble-v" id="bubbleY"></div>
+                </div>
+                <span class="level-deg" id="degY">0.0°</span>
+            </div>
+        </div>
+
+        <!-- アナログコンパスパネル -->
+        <div class="compass-panel">
+            <div class="compassDial">
+                <div class="dial-face" id="dialFace">
+                    <span class="dial-mark mark-n">N</span>
+                    <span class="dial-mark mark-e">E</span>
+                    <span class="dial-mark mark-s">S</span>
+                    <span class="dial-mark mark-w">W</span>
+                </div>
+                <div class="needle" id="needle">
+                    <div class="needle-body">
+                        <div class="needle-n"></div>
+                        <div class="needle-s"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="compass-text">
+                <div class="label">方位角</div>
+                <div class="value" id="compassVal">--° (--)</div>
+            </div>
+        </div>
+
+        <!-- GPS情報パネル -->
+        <div class="gps-panel">
+            <div class="gps-item">
+                <div class="label">緯度 (Latitude)</div>
+                <div class="value" id="latVal">---</div>
+            </div>
+            <div class="gps-item">
+                <div class="label">経度 (Longitude)</div>
+                <div class="value" id="lonVal">---</div>
+            </div>
+            <div class="gps-item">
+                <div class="label">標高 (Altitude)</div>
+                <div class="value" id="altVal">---</div>
+            </div>
+            <div class="gps-item">
+                <div class="label">GPS精度</div>
+                <div class="value" id="accVal">---</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const bubbleX = document.getElementById('bubbleX');
+        const bubbleY = document.getElementById('bubbleY');
+        const degX = document.getElementById('degX');
+        const degY = document.getElementById('degY');
+        const compassVal = document.getElementById('compassVal');
+        const permissionBtn = document.getElementById('permissionBtn');
+        const tubeX = document.getElementById('tubeX');
+        const tubeY = document.getElementById('tubeY');
+        const needle = document.getElementById('needle');
+        const splash = document.getElementById('splash');
+        const mainDisplay = document.getElementById('mainDisplay');
+
+        const latVal = document.getElementById('latVal');
+        const lonVal = document.getElementById('lonVal');
+        const altVal = document.getElementById('altVal');
+        const accVal = document.getElementById('accVal');
+
+        function launchApp() {
+            // スプラッシュ画面をフェードアウト
+            splash.classList.add('fade-out');
+            mainDisplay.classList.add('loaded');
+            
+            // センサー開始
+            startListening();
+
+            // GPS取得開始
+            if ('geolocation' in navigator) {
+                navigator.geolocation.watchPosition(updatePosition, handleLocationError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 1000,
+                    timeout: 10000
+                });
+            } else {
+                altVal.innerText = "非対応";
+            }
+        }
+
+        function initSensors() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            launchApp();
+                        } else {
+                            alert('センサーの利用が許可されませんでした。');
+                        }
+                    }).catch(console.error);
+            } else {
+                launchApp();
+            }
+        }
+
+        // 初期化・起動チェック
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // iOS等：許可ボタンを表示してユーザー入力を待つ
+            permissionBtn.style.display = 'block';
+            permissionBtn.addEventListener('click', initSensors);
+        } else {
+            // Androidや通常ブラウザ：自動で数秒（または即座に）起動演出へ
+            setTimeout(launchApp, 800);
+        }
+
+        function startListening() {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+
+        function handleOrientation(event) {
+            let beta = event.beta || 0;   
+            let gamma = event.gamma || 0; 
+
+            degX.innerText = `${gamma.toFixed(1)}°`;
+            degY.innerText = `${beta.toFixed(1)}°`;
+
+            const maxTilt = 30;
+            const tubeWidthX = tubeX.clientWidth - 28;
+            let posX = (gamma / maxTilt) * (tubeWidthX / 2);
+            posX = Math.max(-tubeWidthX / 2, Math.min(tubeWidthX / 2, posX));
+            bubbleX.style.transform = `translate(calc(-50% + ${posX}px), -50%)`;
+
+            const tubeHeightY = tubeY.clientHeight - 28;
+            let posY = (beta / maxTilt) * (tubeHeightY / 2);
+            posY = Math.max(-tubeHeightY / 2, Math.min(tubeHeightY / 2, posY));
+            bubbleY.style.transform = `translate(-50%, calc(-50% + ${posY}px))`;
+
+            if (Math.abs(gamma) < 0.8) {
+                bubbleX.classList.add('level');
+            } else {
+                bubbleX.classList.remove('level');
+            }
+
+            if (Math.abs(beta) < 0.8) {
+                bubbleY.classList.add('level');
+            } else {
+                bubbleY.classList.remove('level');
+            }
+
+            let heading = null;
+            if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+                heading = event.webkitCompassHeading;
+            } else if (event.alpha !== null) {
+                heading = event.alpha;
+            }
+
+            if (heading !== null) {
+                needle.style.transform = `translate(-50%, -50%) rotate(${heading}deg)`;
+
+                const directions = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
+                const index = Math.round((heading % 360) / 22.5);
+                const dirStr = directions[index % 16];
+                compassVal.innerText = `${Math.round(heading)}° (${dirStr})`;
+            }
+        }
+
+        function updatePosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const alt = position.coords.altitude;
+            const accuracy = position.coords.accuracy;
+
+            latVal.innerText = lat.toFixed(5);
+            lonVal.innerText = lon.toFixed(5);
+            
+            if (alt !== null) {
+                altVal.innerText = `${alt.toFixed(1)} m`;
+            } else {
+                altVal.innerText = "取得中...";
+            }
+            accVal.innerText = `±${Math.round(accuracy)} m`;
+        }
+
+        function handleLocationError(error) {
+            console.warn(`GPS取得エラー: ${error.message}`);
+        }
+    </script>
+</body>
+</html>
+

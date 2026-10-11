@@ -1,0 +1,19 @@
+{
+  "name": "マルチ水平器",
+  "short_name": "マルチ水平器",
+  "description": "縦横の水平器、アナログコンパス、GPS緯度経度・標高を測定できる多機能ツール",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#1a1a1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

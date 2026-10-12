@@ -86,15 +86,34 @@
         }
 
         header {
-            text-align: center;
+            position: relative;
             width: 100%;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 5px;
+            padding: 0 5px;
         }
         h1 {
             font-size: 1rem;
             color: #888;
             letter-spacing: 1px;
         }
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #aaa;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .main-display {
             display: flex;
             flex-direction: column;
@@ -155,10 +174,7 @@
         }
         .tube-h .center-mark {
             position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 2px;
+            left: 50%; top: 0; bottom: 0; width: 2px;
             background: rgba(255, 255, 255, 0.3);
             transform: translateX(-50%);
         }
@@ -178,10 +194,7 @@
         }
         .tube-v .center-mark {
             position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 2px;
+            top: 50%; left: 0; right: 0; height: 2px;
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-50%);
         }
@@ -201,6 +214,27 @@
         }
         .bubble-v {
             left: 50%; top: 50%; width: 20px; height: 24px; border-radius: 10px; transform: translate(-50%, -50%);
+        }
+
+        /* コントロールボタンエリア */
+        .ctrl-bar {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .ctrl-btn {
+            flex: 1;
+            background: #222;
+            border: 1px solid #444;
+            color: #ddd;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .ctrl-btn:active {
+            background: #333;
         }
 
         /* アナログコンパスパネル */
@@ -231,8 +265,7 @@
 
         .dial-face {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             border-radius: 50%;
         }
 
@@ -249,19 +282,15 @@
 
         .needle {
             position: absolute;
-            width: 6px;
-            height: 60px;
-            top: 50%;
-            left: 50%;
+            width: 6px; height: 60px;
+            top: 50%; left: 50%;
             transform-origin: center center;
             z-index: 2;
         }
         .needle-body {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
+            width: 100%; height: 100%;
+            top: 0; left: 0;
             transform: translate(-50%, -50%);
         }
         .needle-n {
@@ -284,16 +313,13 @@
             text-align: left;
         }
         .compass-text .label {
-            font-size: 0.7rem;
-            color: #888;
+            font-size: 0.7rem; color: #888;
         }
         .compass-text .value {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #007aff;
+            font-size: 1.1rem; font-weight: bold; color: #007aff;
         }
 
-        /* GPS・位置情報パネル */
+        /* GPSパネル */
         .gps-panel {
             background: #1a1a1a;
             border: 1px solid #333;
@@ -311,14 +337,10 @@
             text-align: center;
         }
         .gps-item .label {
-            font-size: 0.7rem;
-            color: #888;
-            margin-bottom: 2px;
+            font-size: 0.7rem; color: #888; margin-bottom: 2px;
         }
         .gps-item .value {
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #34c759;
+            font-size: 0.95rem; font-weight: bold; color: #34c759;
         }
 
         .permission-btn {
@@ -336,7 +358,7 @@
 </head>
 <body>
 
-    <!-- 起動時のおしゃれなスプラッシュスクリーン -->
+    <!-- 起動スプラッシュ画面 -->
     <div id="splash">
         <div class="splash-logo">
             <div class="splash-bubble"></div>
@@ -347,7 +369,9 @@
     </div>
 
     <header>
+        <div></div>
         <h1>マルチ水平器</h1>
+        <button class="close-btn" id="closeBtn" title="アプリを閉じる">✕</button>
     </header>
 
     <div class="main-display" id="mainDisplay">
@@ -372,7 +396,13 @@
             </div>
         </div>
 
-        <!-- アナログコンパスパネル -->
+        <!-- キャリブレーション (ゼロ調整) バー -->
+        <div class="ctrl-bar">
+            <button class="ctrl-btn" id="calibBtn">ゼロ調整 (0°リセット)</button>
+            <button class="ctrl-btn" id="resetCalibBtn">調整解除</button>
+        </div>
+
+        <!-- アナログコンパス -->
         <div class="compass-panel">
             <div class="compassDial">
                 <div class="dial-face" id="dialFace">
@@ -394,7 +424,7 @@
             </div>
         </div>
 
-        <!-- GPS情報パネル -->
+        <!-- GPSパネル -->
         <div class="gps-panel">
             <div class="gps-item">
                 <div class="label">緯度 (Latitude)</div>
@@ -427,21 +457,46 @@
         const needle = document.getElementById('needle');
         const splash = document.getElementById('splash');
         const mainDisplay = document.getElementById('mainDisplay');
+        const closeBtn = document.getElementById('closeBtn');
+
+        const calibBtn = document.getElementById('calibBtn');
+        const resetCalibBtn = document.getElementById('resetCalibBtn');
 
         const latVal = document.getElementById('latVal');
         const lonVal = document.getElementById('lonVal');
         const altVal = document.getElementById('altVal');
         const accVal = document.getElementById('accVal');
 
+        // キャリブレーション（ゼロ点オフセット）
+        let offsetX = 0;
+        let offsetY = 0;
+        let lastRawX = 0;
+        let lastRawY = 0;
+
+        // バイブレーション判定用フラグ
+        let wasLevelX = false;
+        let wasLevelY = false;
+
+        // 画面常時点灯 (Screen Wake Lock) のリクエスト
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log('Wake Lock Error:', err);
+                }
+            }
+        }
+
         function launchApp() {
-            // スプラッシュ画面をフェードアウト
             splash.classList.add('fade-out');
             mainDisplay.classList.add('loaded');
             
-            // センサー開始
+            // スリープ防止をリクエスト
+            requestWakeLock();
+            
             startListening();
 
-            // GPS取得開始
             if ('geolocation' in navigator) {
                 navigator.geolocation.watchPosition(updatePosition, handleLocationError, {
                     enableHighAccuracy: true,
@@ -468,13 +523,10 @@
             }
         }
 
-        // 初期化・起動チェック
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // iOS等：許可ボタンを表示してユーザー入力を待つ
             permissionBtn.style.display = 'block';
             permissionBtn.addEventListener('click', initSensors);
         } else {
-            // Androidや通常ブラウザ：自動で数秒（または即座に）起動演出へ
             setTimeout(launchApp, 800);
         }
 
@@ -483,8 +535,15 @@
         }
 
         function handleOrientation(event) {
-            let beta = event.beta || 0;   
-            let gamma = event.gamma || 0; 
+            let rawBeta = event.beta || 0;   
+            let rawGamma = event.gamma || 0; 
+
+            lastRawX = rawGamma;
+            lastRawY = rawBeta;
+
+            // キャリブレーション（オフセット適用）
+            let gamma = rawGamma - offsetX;
+            let beta = rawBeta - offsetY;
 
             degX.innerText = `${gamma.toFixed(1)}°`;
             degY.innerText = `${beta.toFixed(1)}°`;
@@ -500,18 +559,28 @@
             posY = Math.max(-tubeHeightY / 2, Math.min(tubeHeightY / 2, posY));
             bubbleY.style.transform = `translate(-50%, calc(-50% + ${posY}px))`;
 
-            if (Math.abs(gamma) < 0.8) {
+            // 水平判定 & 触覚フィードバック（バイブレーション）
+            let isLevelX = Math.abs(gamma) < 0.8;
+            let isLevelY = Math.abs(beta) < 0.8;
+
+            if (isLevelX) {
                 bubbleX.classList.add('level');
+                if (!wasLevelX && 'vibrate' in navigator) navigator.vibrate(30);
             } else {
                 bubbleX.classList.remove('level');
             }
 
-            if (Math.abs(beta) < 0.8) {
+            if (isLevelY) {
                 bubbleY.classList.add('level');
+                if (!wasLevelY && 'vibrate' in navigator) navigator.vibrate(30);
             } else {
                 bubbleY.classList.remove('level');
             }
 
+            wasLevelX = isLevelX;
+            wasLevelY = isLevelY;
+
+            // コンパス
             let heading = null;
             if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
                 heading = event.webkitCompassHeading;
@@ -528,6 +597,27 @@
                 compassVal.innerText = `${Math.round(heading)}° (${dirStr})`;
             }
         }
+
+        // キャリブレーションボタン動作
+        calibBtn.addEventListener('click', () => {
+            offsetX = lastRawX;
+            offsetY = lastRawY;
+            if ('vibrate' in navigator) navigator.vibrate([40, 50, 40]);
+            alert('現在の角度を 0.0° にリセットしました。');
+        });
+
+        resetCalibBtn.addEventListener('click', () => {
+            offsetX = 0;
+            offsetY = 0;
+            alert('ゼロ調整を解除しました。');
+        });
+
+          // アプリ終了ボタン処理
+        closeBtn.addEventListener('click', () => {
+            if (window.confirm('マルチ水平器を閉じますか？')) {
+                window.close();
+            }
+        });
 
         function updatePosition(position) {
             const lat = position.coords.latitude;
@@ -552,4 +642,3 @@
     </script>
 </body>
 </html>
-

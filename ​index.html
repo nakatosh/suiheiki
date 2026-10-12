@@ -467,17 +467,14 @@
         const altVal = document.getElementById('altVal');
         const accVal = document.getElementById('accVal');
 
-        // キャリブレーション（ゼロ点オフセット）
         let offsetX = 0;
         let offsetY = 0;
         let lastRawX = 0;
         let lastRawY = 0;
 
-        // バイブレーション判定用フラグ
         let wasLevelX = false;
         let wasLevelY = false;
 
-        // 画面常時点灯 (Screen Wake Lock) のリクエスト
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try {
@@ -491,10 +488,7 @@
         function launchApp() {
             splash.classList.add('fade-out');
             mainDisplay.classList.add('loaded');
-            
-            // スリープ防止をリクエスト
             requestWakeLock();
-            
             startListening();
 
             if ('geolocation' in navigator) {
@@ -541,7 +535,6 @@
             lastRawX = rawGamma;
             lastRawY = rawBeta;
 
-            // キャリブレーション（オフセット適用）
             let gamma = rawGamma - offsetX;
             let beta = rawBeta - offsetY;
 
@@ -559,7 +552,6 @@
             posY = Math.max(-tubeHeightY / 2, Math.min(tubeHeightY / 2, posY));
             bubbleY.style.transform = `translate(-50%, calc(-50% + ${posY}px))`;
 
-            // 水平判定 & 触覚フィードバック（バイブレーション）
             let isLevelX = Math.abs(gamma) < 0.8;
             let isLevelY = Math.abs(beta) < 0.8;
 
@@ -580,7 +572,6 @@
             wasLevelX = isLevelX;
             wasLevelY = isLevelY;
 
-            // コンパス
             let heading = null;
             if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
                 heading = event.webkitCompassHeading;
@@ -598,7 +589,6 @@
             }
         }
 
-        // キャリブレーションボタン動作
         calibBtn.addEventListener('click', () => {
             offsetX = lastRawX;
             offsetY = lastRawY;
@@ -612,8 +602,7 @@
             alert('ゼロ調整を解除しました。');
         });
 
-          // アプリ終了ボタン処理
-        closeBtn.addEventListener('click', () => {
+       closeBtn.addEventListener('click', () => {
             if (window.confirm('マルチ水平器を閉じますか？')) {
                 window.close();
             }
